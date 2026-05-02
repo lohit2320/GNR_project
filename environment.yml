@@ -8,13 +8,14 @@ dependencies:
   - python=3.11
   - pip
   - pip:
-    - torch>=2.3.0
-    - torchvision
-    - transformers>=4.49.0
-    - accelerate>=0.30.0
-    - qwen-vl-utils
-    - pillow
-    - pandas
-    - tqdm
-    - --no-deps xformers "trl<0.9.0" peft bitsandbytes
-    - unsloth
+    - torch==2.4.0
+    - torchvision==0.19.0
+    - transformers==4.49.0
+    - accelerate==1.4.0
+    - bitsandbytes==0.45.3
+    - qwen-vl-utils==0.0.10
+    - pandas==2.2.3
+    - pillow==11.0.0
+    - huggingface_hub==0.27.1
+    - sentencepiece==0.2.0
+    - protobuf==5.29.3
