@@ -311,7 +311,8 @@ else:
     submission = df.copy()
     submission["option"] = "5"
 
-submission = submission[["image_name", "option"]]
+submission["id"] = submission["image_name"]
+submission = submission[["id", "image_name", "option"]]
 submission.to_csv(OUTPUT_CSV, index=False)
 
 
