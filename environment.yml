@@ -1,4 +1,4 @@
-name: gnr_project_env
+name: gnr_project_env2
 channels:
   - pytorch
   - nvidia
