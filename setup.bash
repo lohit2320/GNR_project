@@ -1,17 +1,19 @@
 #!/bin/bash
 set -e
 
-# Use current environment or create one
-# If you are on a system like Lambda or RunPod, you might just want to use the base env
-# But let's stick to the script's logic if the user wants a clean env.
+echo "===== Initializing Conda ====="
+# This line is required to make the 'conda activate' command work inside a bash script
+source $(conda info --base)/etc/profile.d/conda.sh
 
-echo "===== Installing core dependencies ====="
-pip install --upgrade pip
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-pip install "transformers>=4.49.0" accelerate qwen-vl-utils pillow pandas tqdm
+echo "===== Creating Conda Environment from environment.yml ====="
+# This reads your environment.yml and installs Python 3.11, PyTorch, Transformers, etc.
+conda env create -f environment.yml
+
+echo "===== Activating Environment ====="
+conda activate gnr_project_env
 
 echo "===== Installing Unsloth (optimized fine-tuning) ====="
-# Unsloth for Qwen3-VL
+# These were missing from your environment.yml, so we install them here
 pip install unsloth
 pip install --no-deps xformers "trl<0.9.0" peft bitsandbytes
 
