@@ -139,30 +139,48 @@ def predict_with_reflection(image_path: str) -> str:
     match2 = re.search(r"[1-4]", reflection_response[-50:])
     return match2.group(0) if match2 else "5"
 
-# ... in the main loop, change:
-# option = predict_direct(image_path)
-# to:
-# option = predict_with_reflection(image_path)
 
+# ── Initialization & Resume Logic ────────────────────────────────────────────
+
+# 1. Gather the initial DataFrame
 if os.path.exists(TEST_CSV):
     df = pd.read_csv(TEST_CSV)
     print(f"Found {len(df)} test samples in CSV.")
 else:
     print(f"CSV not found at {TEST_CSV}. Processing all images in {IMAGE_DIR}...")
-    # Fallback: list all images in the directory
     if os.path.exists(IMAGE_DIR):
         img_list = [f for f in os.listdir(IMAGE_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        # remove extension for image_name to match your expected logic
         df = pd.DataFrame({"image_name": [os.path.splitext(f)[0] for f in img_list]})
     else:
-        # Final fallback: if --test_dir IS the image directory
         img_list = [f for f in os.listdir(TEST_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         df = pd.DataFrame({"image_name": [os.path.splitext(f)[0] for f in img_list]})
         IMAGE_DIR = TEST_DIR
 
-results = []
-for _, row in tqdm(df.iterrows(), total=len(df), desc="Predicting"):
+# 2. Setup the Submission CSV instantly (load if exists, create if not)
+if os.path.exists(OUTPUT_CSV):
+    print(f"Found existing {OUTPUT_CSV}. Resuming from previous state...")
+    submission = pd.read_csv(OUTPUT_CSV)
+    # Ensure options are treated as strings
+    submission["option"] = submission["option"].astype(str)
+else:
+    print(f"Creating new {OUTPUT_CSV} initialized with '5'...")
+    submission = df.copy()
+    if "id" not in submission.columns:
+        submission["id"] = submission["image_name"]
+    submission["option"] = "5"
+    # Reorder to ensure standard submission format
+    submission = submission[["id", "image_name", "option"]]
+    submission.to_csv(OUTPUT_CSV, index=False)
+
+# 3. Main Loop
+for index, row in tqdm(submission.iterrows(), total=len(submission), desc="Predicting"):
     image_name = row["image_name"]
+    current_option = str(row["option"])
+    
+    # Skip items we've already successfully predicted
+    if current_option in ["1", "2", "3", "4"]:
+        continue
+        
     image_path = os.path.join(IMAGE_DIR, f"{image_name}.png")
     if not os.path.exists(image_path):
         image_path = os.path.join(IMAGE_DIR, image_name)
@@ -171,12 +189,16 @@ for _, row in tqdm(df.iterrows(), total=len(df), desc="Predicting"):
         print(f"  [WARN] Not found: {image_path} → 5")
         option = "5"
     else:
-        # Using multi-pass reflection for higher accuracy
-        option = predict_with_reflection(image_path)
-        print(f"  {image_name} → {option}")
-    results.append({"id": image_name, "image_name": image_name, "option": option})
+        try:
+            option = predict_with_reflection(image_path)
+            print(f"  {image_name} → {option}")
+        except Exception as e:
+            print(f"  [ERROR] Failed processing {image_name}: {str(e)}")
+            option = "5" # Leave as 5 on error so we can retry it later if needed
+            
+    # Instant Update: Save row immediately
+    submission.at[index, "option"] = option
+    submission.to_csv(OUTPUT_CSV, index=False)
 
-submission = pd.DataFrame(results)
-submission.to_csv(OUTPUT_CSV, index=False)
-print(f"\nDone! Saved {OUTPUT_CSV}")
+print(f"\nDone! Final results saved to {OUTPUT_CSV}")
 print(submission["option"].value_counts().sort_index())
